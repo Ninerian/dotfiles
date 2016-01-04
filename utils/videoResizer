@@ -1,0 +1,187 @@
+#!/bin/bash
+
+#
+# video conversion script for publishing as HTML 5 video
+# 2011 by zpea
+# 2014 by ninerian
+# feel free to use as public domain / Creative Commons CC0 1.0 (http://creativecommons.org/publicdomain/zero/1.0/)
+#
+
+FFMPEG=/usr/local/bin/ffmpeg
+
+WIDTHS=('4096' '2560' '2048' '1920' '1024')
+HEIGHTS=('2048' '1280' '1024' '960' '512')
+
+MP4BITRATES=('17' '15' '12' '12' '7')
+WEBMBITRATES=('12' '9' '7' '3' '1')
+#WEBMBITRATES=('6' '5' '4' '2' '0.5')
+
+#WIDTHS=('2560' '2048' '1920')
+#HEIGHTS=('1280' '1024' '960')
+
+MP4VIDEO=' -vcodec libx264 -strict -2 -pix_fmt yuv420p -threads 0 -bufsize 2000k -profile:v high -preset slow -crf 23 -f mp4'
+
+MP4AUDIO=' -codec:a libfdk_aac -b:a 128k'
+
+
+WEBMVIDEO=' -c:v libvpx-vp9 -crf 22 -threads 8 -bufsize 2000k -tile-columns 6 -frame-parallel 1 -auto-alt-ref 1 -lag-in-frames 25 -f webm'
+
+WEBMAUDIO=' -c:a libopus -b:a 64k'
+
+
+
+DESCR_H264='mp4 (h.264/aac)'
+DESCR_WEBM='webm (vp8/vorbis)'
+DESCR_OGG='ogv (theora/vorbis)'
+
+function usage(){
+  echo
+  echo
+  echo usage:
+  echo $0' <input video file>' $1' <destination>' $2' <path to logo file>' $3
+  echo
+  echo 
+  echo 'The input video file is converted to '$DESCR_H264', '$DESCR_WEBM' and '$DESCR_OGG' videos.'
+  echo
+  echo
+  echo 'All output files are created in the current working directory and named according to the input file'\''s name' 
+  echo
+  echo
+}
+#ffmpeg -i $i -i logo_erg_2015.tiff -filter_complex "overlay=(W-w)/2:(H-h)" -codec:a copy logo/${i%.*}.mp4
+
+# exactly one argument required
+if [[ ($# -ne 1) && ($# -ne 2) && ($# -ne 3) ]]
+then
+  usage
+  exit 1
+fi
+
+INFILE=$1
+if [ ! -f $INFILE ];
+then
+  echo 'Input file does not exist or is not a regular file'
+  exit 2
+fi
+
+if [ -z "$2" ];
+  then
+    OUTDIR='.'
+  else
+    OUTDIR=$2
+fi
+
+echo $1;
+echo $2;
+echo $3;
+
+if [ ! -d $OUTDIR ]
+  then
+  echo "Output directory doesn't exist so I'am creating it for you."
+  mkdir  "$OUTDIR"
+fi
+
+
+
+BASENAME=${1##*/}
+BASE_WITHOUT_EXT=${BASENAME%.*}
+FILENAME=$(expr $BASE_WITHOUT_EXT : '^\(.[a-z,A-Z,0-9]*_.[a-z,A-Z,0-9]*\)');
+
+if [ ! -z "$3" ];
+  then
+  if [ ! -d 'tmp' ]
+    then
+    echo "Temp directory doesn't exist so I'am creating it for you."
+    mkdir  "tmp"
+  fi
+  
+  if [ ! -f tmp/$INFILE.mp4 ]
+    then
+    $FFMPEG -hide_banner -n -i $INFILE -i $3 -filter_complex "overlay=(W-w)/2:(H-h)" -c:v libx264 -crf 18 -preset slow -codec:a copy tmp/${INFILE%.*}.mp4
+  fi
+
+  INFILE=tmp/$INFILE;
+fi
+
+# should be unnecessary thanks to -vpre baseline
+#H264_OPTS_BASELINE="-vcodec libx264 -b 512k -flags +loop+mv4 -cmp 256 -partitions +parti4x4+parti8x8+partp4x4+partp8x8+partb8x8 -me_method hex -subq 7 -trellis 1 -refs 5 -bf 0 -flags2 +mixed_refs -coder 0 -me_range 16 -g 250 -keyint_min 25 -sc_threshold 40 -i_qfactor 0.71 -qmin 10 -qmax 51 -qdiff 4"
+for i in "${!WIDTHS[@]}";
+  do
+    width=${WIDTHS[$i]};
+    height=${HEIGHTS[$i]};
+	
+	if [ ! -d '${OUTDIR}/${FILENAME}' ]
+	    then
+	    echo "Temp directory doesn't exist so I'am creating it for you."
+	    mkdir  "${OUTDIR}/${FILENAME}"
+  	fi
+
+    fileName=${OUTDIR}/${FILENAME}/${FILENAME}_${width}x${height};
+    if [ ! -f $fileName.mp4 ]
+    	then
+	    echo 
+	    echo 
+	    echo ====================================================================
+	    echo '   Starting conversion to '$DESCR_H264' at '${MP4BITRATES[$i]}'M'
+	    echo '   output to '$fileName.mp4
+	    echo ====================================================================
+	    echo
+	    # echo '$FFMPEG -loglevel warning -hide_banner -y -i '$INFILE' -ss 30 -to 40 '$MP4VIDEO' -b:v '${MP4BITRATES[$i]}'M -maxrate '${MP4BITRATES[$i]}'M -vf "scale='$width':-1" -threads 0 -pass 1 -an /dev/null && \'
+		# echo '$FFMPEG -loglevel warning -hide_banner -n -i '$INFILE' -ss 30 -to 40 '$MP4VIDEO' -b:v '${MP4BITRATES[$i]}'M -maxrate '${MP4BITRATES[$i]}'M -vf "scale='$width':-1" -threads 0 -pass 2 '$MP4AUDIO' -f -movflags +faststart '$fileName'.mp4'
+
+	 	$FFMPEG -loglevel info -hide_banner -y -i $INFILE $MP4VIDEO -b:v ${MP4BITRATES[$i]}M -maxrate ${MP4BITRATES[$i]}M -vf "scale=$width:-1" -threads 0 -pass 1 -an /dev/null && \
+		$FFMPEG -loglevel info -hide_banner -n -i $INFILE $MP4VIDEO -b:v ${MP4BITRATES[$i]}M -maxrate ${MP4BITRATES[$i]}M -vf "scale=$width:-1" -threads 0 -pass 2 $MP4AUDIO -movflags +faststart $fileName.mp4
+
+   	fi
+    # echo
+    # echo ================================================================
+    # echo '   Starting conversion to SD '$DESCR_OGG
+    # echo '   output to '$fileName.ogv
+    # echo ================================================================
+    # echo
+    
+    # $FFMPEG -hide_banner -n -i $INFILE  -pix_fmt yuv420p -f ogg -vcodec libtheora -c:v libtheora -c:a libvorbis -q:v 4 -vf "scale=$width:-1" -movflags +faststart $fileName.ogv
+
+   	if [ ! -f $fileName.jpg ]
+		then
+	    echo
+	    echo ================================================================
+	    echo '   Creating poster jpeg (frame at 5s)'
+	    echo ================================================================
+	    echo
+	    $FFMPEG -hide_banner -n -i $INFILE -ss 00:05 -vf "scale=$width:-1" -vframes 1 -r 1 -f image2 $fileName.jpg
+	fi
+done
+
+for i in "${!WIDTHS[@]}";
+  do
+    width=${WIDTHS[$i]};
+    height=${HEIGHTS[$i]};
+	
+	if [ ! -d '${OUTDIR}/${FILENAME}' ]
+	    then
+	    echo "Temp directory doesn't exist so I'am creating it for you."
+	    mkdir  "${OUTDIR}/${FILENAME}"
+  	fi
+
+    fileName=${OUTDIR}/${FILENAME}/${FILENAME}_${width}x${height};
+	if [ ! -f $fileName.webm ]
+		then
+	 	echo
+	    echo =====================================================================
+	    echo '   Starting conversion to SD '$DESCR_WEBM' at '${MP4BITRATES[$i]}'M'
+	    echo '   output to '$fileName.webm
+	    echo =====================================================================
+	    echo
+	    # echo '$FFMPEG -loglevel info -hide_banner -y -i '$INFILE' -ss 30 -to 40 '$WEBMVIDEO' -speed 4 -pass 1 -b:v '${WEBMBITRATES[$i]}'M -vf "scale='$width':-1" -an -f webm /dev/null  &&\'
+		# echo '$FFMPEG -loglevel info -hide_banner -n -i '$INFILE' -ss 30 -to 40 '$WEBMVIDEO' -speed 2 -pass 2 -b:v '${WEBMBITRATES[$i]}'M -vf "scale='$width':-1" '$WEBMAUDIO' -movflags +faststart '$fileName'.webm'
+	    	
+
+		$FFMPEG -loglevel info -hide_banner -y -i $INFILE $WEBMVIDEO -speed 4 -pass 1 -b:v ${WEBMBITRATES[$i]}M  -vf "scale=$width:-1" -an -f webm /dev/null  &&\
+		$FFMPEG -loglevel info -hide_banner -n -i $INFILE $WEBMVIDEO -speed 2 -pass 2 -b:v ${WEBMBITRATES[$i]}M  -vf "scale=$width:-1" $WEBMAUDIO -movflags +faststart $fileName.webm
+	fi   
+
+done
+
+
+

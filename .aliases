@@ -8,6 +8,7 @@ alias -- -="cd -"
 
 # programs
 alias st='open -a "Sublime Text 2"'
+alias subl=st
 # also/or do this:
 # ln -s "/Applications/Sublime Text 2.app/Contents/SharedSupport/bin/subl" ~/bin/subl
 alias preview="open -a '$PREVIEW'"
@@ -23,6 +24,7 @@ alias f='open -a Finder'
 alias fireworks="open -a '/Applications/Adobe Fireworks CS6/Adobe Fireworks CS6.app'"
 alias photoshop="open -a '/Applications/Adobe Photoshop CS6/Adobe Photoshop.app'"
 alias gpr="~/code/gpr $1"
+alias sketchtool="/opt/homebrew-cask/Caskroom/sketch-tool/latest/sketchtool/bin/sketchtool"
 
 
 # general shortcuts
@@ -143,3 +145,22 @@ done
 alias stfu="osascript -e 'set volume output muted true'"
 alias pumpitup="osascript -e 'set volume 10'"
 alias hax="growlnotify -a 'Activity Monitor' 'System error' -m 'WTF R U DOIN'"
+
+
+alias cpa="cpafter.sh"
+alias cpi="copy_it.sh"
+
+alias cljsbuild="lein trampoline cljsbuild $@"
+
+alias nginx.start='sudo launchctl load /Library/LaunchDaemons/homebrew.mxcl.nginx.plist'
+alias nginx.stop='sudo launchctl unload /Library/LaunchDaemons/homebrew.mxcl.nginx.plist'
+alias nginx.restart='nginx.stop && nginx.start'
+alias php-fpm.start="launchctl load -w ~/Library/LaunchAgents/homebrew.mxcl.php56.plist"
+alias php-fpm.stop="launchctl unload -w ~/Library/LaunchAgents/homebrew.mxcl.php56.plist"
+alias php-fpm.restart='php-fpm.stop && php-fpm.start'
+alias nginx.logs.error='tail -250f /usr/local/var/log/nginx/error.log'
+alias nginx.logs.access='tail -250f /usr/local/var/log/nginx/localhost.access.log'
+alias nginx.logs.projects.access='tail -250f /usr/local/var/log/nginx/projects.access.log'
+alias nginx.logs.learning.access='tail -250f /usr/local/var/log/nginx/learning.access.log'
+alias nginx.logs.grunt.access='tail -250f /usr/local/var/log/nginx/grunt.access.log'
+
